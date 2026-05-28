@@ -23,7 +23,7 @@ class TestoRequest(BaseModel):
 
 # Configurazione GROQ (Gratuito)
 # Ottieni la chiave gratis su console.groq.com
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+GROQ_API_KEY = "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"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 def chiama_ai_gratuita(prompt_sistema, prompt_utente):
