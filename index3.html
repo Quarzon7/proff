@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>index3</title>
+  <style>
+
+  </style>
+</head>
+<body>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Verbali - Liceo Aristosseno</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@400;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; }
+        .font-serif { font-family: 'Merriweather', serif; }
+        .step-blur { filter: blur(4px); pointer-events: none; opacity: 0.4; transition: all 0.5s ease; }
+        
+        /* Stile specifico per l'anteprima e la stampa del verbale */
+        .stampa-verbale { font-family: 'Times New Roman', Times, serif; line-height: 1.6; color: #000; text-align: justify; }
+        .paragrafo-verbale { margin-bottom: 12px; text-indent: 20px; font-size: 11.5px; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        @media print {
+            body { background: white; color: black; }
+            .no-print { display: none !important; }
+            #area-stampa-documento { box-shadow: none !important; margin: 0 !important; padding: 0 !important; max-width: 100% !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen selection:bg-blue-200 selection:text-blue-900">
+
+    <header class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white shadow-lg py-5 px-6 mb-8 no-print border-b-4 border-amber-500">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-5">
+            <div class="flex items-center gap-4">
+                <div class="bg-white/10 p-2.5 rounded-lg backdrop-blur-sm border border-white/20">
+                    <svg class="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" />
+                </div>
+                <div>
+                    <h1 class="text-2xl font-serif font-bold tracking-tight text-white drop-shadow-sm">Liceo Ginnasio Statale Aristosseno</h1>
+                    <p class="text-xs text-blue-200 mt-1 font-medium tracking-wide">Strumento di Redazione per verbali consiglio di classe</p>
+                </div>
+            </div>
+            <div id="indicatore-microfono" class="hidden text-xs bg-red-500/20 text-red-100 border border-red-500/50 font-bold px-4 py-2 rounded-full animate-pulse flex items-center gap-2 shadow-[0_0_10px_rgba(239,68,68,0.3)]">
+                <span class="relative flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+                ACQUISIZIONE FLUSSO AUDIO...
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 pb-20 space-y-8">
+        
+        <section class="bg-white p-7 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-slate-200 no-print">
+            <h2 class="text-sm font-bold text-blue-900 uppercase tracking-widest mb-2 border-b border-slate-100 pb-3 flex items-center gap-2">
+                <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">1</span> Analisi Preliminare Documenti di Registro
+            </h2>
+            <p class="text-sm text-slate-500 mb-5">Carica la tabella della classe scaricata dal registro (voti e note) prima di configurare la seduta. Il sistema estrae automaticamente le criticità per la relazione.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 transition-colors hover:border-blue-300">
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-3 tracking-wide">Importa File (.CSV o .PDF)</label>
+                    <input type="file" id="input-documento" accept=".csv, .pdf" onchange="analizzaDocumentoEstraiCriticita()" class="w-full text-sm text-slate-600 file:mr-3 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-900 file:text-white hover:file:bg-blue-800 file:transition-colors file:cursor-pointer cursor-pointer">
+                    <div id="status-caricamento" class="text-xs font-medium text-slate-500 mt-4 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-slate-300"></span> Nessun documento depositato
+                    </div>
+                </div>
+                
+                <div class="md:col-span-2 bg-gradient-to-br from-amber-50 to-orange-50 p-5 rounded-xl border border-amber-200/60 shadow-inner">
+                    <label class="block text-xs font-semibold text-amber-900 uppercase mb-2 tracking-wide">Sintesi criticitá della classe</label>
+                    <textarea id="area-criticita-rilevate" class="w-full p-3 bg-white/80 border border-amber-200 rounded-lg text-sm h-24 shadow-sm text-slate-800 font-serif focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white transition-all resize-y" placeholder="Le criticità rilevate appariranno qui"></textarea>
+                </div>
+            </div>
+            <textarea id="scrigno-testo-grezzo" class="hidden"></textarea>
+        </section>
+
+        <section class="bg-white p-7 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-slate-200 no-print">
+            <h2 class="text-sm font-bold text-blue-900 uppercase tracking-widest mb-5 border-b border-slate-100 pb-3 flex items-center gap-2">
+                <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">2</span> Dati della Sessione e Appello
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1.5 tracking-wide">Data Seduta</label>
+                    <input type="date" id="cfg-data" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1.5 tracking-wide">Ora Apertura</label>
+                    <input type="time" id="cfg-ora-inizio" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1.5 tracking-wide">Ora Chiusura</label>
+                    <input type="time" id="cfg-ora-fine" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1.5 tracking-wide">Classe / Indirizzo</label>
+                    <input type="text" id="cfg-classe" placeholder="" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none">
+                </div>
+            </div>
+
+            <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 mb-5">
+                <h3 class="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-4">
+                    <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" />
+                    Componente Personale Docente
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Docenti Presenti (Separati da virgola)</label>
+                        <input type="text" id="docenti-presenti" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none" placeholder="">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Docenti Assenti</label>
+                        <input type="text" id="docenti-assenti" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none" placeholder="">
+                    </div>
+                </div>
+            </div>
+
+            <label class="inline-flex items-center gap-3 cursor-pointer mb-5 p-3.5 bg-blue-50/50 hover:bg-blue-50 border border-blue-200 rounded-xl w-full md:w-auto transition-colors">
+                <input type="checkbox" id="chk-esterni" onchange="toggleComponentiEsterne()" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 border-slate-300">
+                <span class="text-sm font-semibold text-blue-900">Includi Componenti Esterne (Rappresentanti Genitori / Alunni)</span>
+            </label>
+
+            <div id="box-esterni" class="hidden space-y-5 animate-[fadeIn_0.3s_ease-in-out]">
+                <div class="bg-slate-50 p-5 rounded-xl border border-slate-200">
+                    <h3 class="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-4">
+                        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" />
+                        Componente Rappresentanti Genitori
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Genitori Presenti</label>
+                            <input type="text" id="genitori-presenti" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Genitori Assenti</label>
+                            <input type="text" id="genitori-assenti" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-5 rounded-xl border border-slate-200">
+                    <h3 class="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-4">
+                        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" />
+                        Componente Rappresentanti Alunni
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Alunni Presenti</label>
+                            <input type="text" id="alunni-presenti" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Alunni Assenti</label>
+                            <input type="text" id="alunni-assenti" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-white p-7 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-slate-200 no-print">
+            <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-4 border-b border-slate-100 pb-4">
+                <h2 class="text-sm font-bold text-blue-900 uppercase tracking-widest flex items-center gap-2">
+                    <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">3</span> Registrazione Traccia della Seduta
+                </h2>
+                <button id="btn-registra-flusso" onclick="invertiRegistrazioneFlusso()" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-5 rounded-lg text-sm shadow transition-all flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" />
+                    <span>Avvia Registrazione Seduta</span>
+                </button>
+            </div>
+            <p class="text-sm text-slate-500 mb-4">Attiva il microfono. Le conversazioni verranno trascritte e trasformate in prosa ministeriale.</p>
+            <textarea id="area-trascrizione-master" class="w-full p-4 border border-slate-300 rounded-xl h-48 bg-slate-50/50 text-sm shadow-inner font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all resize-y leading-relaxed" placeholder="Avvia la registrazione o inserisci la sintesi degli interventi qui..."></textarea>
+            
+            <div class="mt-6 p-5 bg-gradient-to-r from-slate-50 to-blue-50/30 rounded-xl border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-5">
+                <div class="text-left w-full md:w-auto">
+                    <h4 class="text-sm font-semibold text-slate-800 uppercase tracking-wide">Motore di Riformulazione</h4>
+                    <p class="text-xs text-slate-500 mt-1">Genera l'Atto formale come verbale.</p>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+<input type="password" id="api-key-llm" placeholder="" class="p-2.5 border border-slate-300 bg-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all w-full sm:w-60">
+                    
+                    <button onclick="avviaRiformulazioneMinisteriale()" class="bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2.5 px-6 rounded-lg text-sm uppercase tracking-wider shadow-md transition-all whitespace-nowrap flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" />
+                        Genera Verbale
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section id="sezione-anteprima" class="bg-white p-2 sm:p-7 rounded-2xl shadow-sm border border-slate-200 step-blur transition-all duration-500">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-8 no-print border-b border-slate-100 pb-4 px-4 sm:px-0">
+                <h2 class="text-sm font-bold text-blue-900 uppercase tracking-widest flex items-center gap-2 mb-4 sm:mb-0">
+                    <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">4</span> Atto Verbale Conclusivo
+                </h2>
+                <div class="flex gap-3 w-full sm:w-auto">
+                    <button onclick="window.print()" class="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg font-medium text-sm shadow transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" />
+                        Stampa
+                    </button>
+                    <button onclick="esportaInWord()" class="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium text-sm shadow transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" />
+                        Scarica .doc
+                    </button>
+                </div>
+            </div>
+            
+            <div id="area-stampa-documento" class="stampa-verbale bg-white p-8 sm:p-12 rounded-xl max-w-[210mm] mx-auto shadow-[0_0_20px_rgba(0,0,0,0.05)] border border-slate-100 min-h-[297mm]">
+                <div id="corpo-output-dinamico" class="opacity-50 text-center py-20">
+                    <p class="text-slate-400 font-sans text-sm">L'anteprima del verbale apparirà qui dopo la generazione.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+        // PUNTI DELL'ORDINE DEL GIORNO CONDIVISI E CONCORDATI
+        const STRUTTURA_ODG = [
+            { key: "insediamento", titolo: "Inizio anno / Insediamento consiglio di classe" },
+            { key: "programmazione", titolo: "Programmazione disciplinare" },
+            { key: "uda", titolo: "UDA disciplinari" },
+            { key: "uscite", titolo: "Uscite didattiche" },
+            { key: "orientamento", titolo: "Moduli orientamento formativo" },
+            { key: "prove_comuni", titolo: "Prove comuni di ingresso" },
+            { key: "educazione_civica", titolo: "Educazione civica" },
+            { key: "pcto", titolo: "PCTO con individuazione dei tutor interni" },
+            { key: "apprendimento", titolo: "Intervento di apprendimento e corsi" },
+            { key: "ptof", titolo: "PTOF (Piano Triennale dell'Offerta Formativa)" },
+            { key: "andamento", titolo: "Andamento didattico e disciplinare della classe" },
+            { key: "studente_atleta", titolo: "Progetto didattico studente atleta" },
+            { key: "val_trimestre", titolo: "Valutazione didattica del trimestre" },
+            { key: "val_pentamestre", titolo: "Valutazione didattica del pentamestre" },
+            { key: "libri_testo", titolo: "Adozione dei libri di testo e adempimenti terminali" }
+        ];
+
+        let motoreTrascrizione = null;
+        let staRegistrando = false;
+
+        window.onload = () => {
+            document.getElementById('cfg-data').valueAsDate = new Date();
+        };
+
+        // VISIBILITÀ OPZIONALE GENITORI/ALUNNI
+        function toggleComponentiEsterne() {
+            const isChecked = document.getElementById('chk-esterni').checked;
+            document.getElementById('box-esterni').style.display = isChecked ? 'block' : 'none';
+        }
+
+        // ANALISI DOCUMENTALE (FASE 1)
+        function analizzaDocumentoEstraiCriticita() {
+            const fileInput = document.getElementById('input-documento');
+            const statusBox = document.getElementById('status-caricamento');
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            statusBox.innerHTML = "<span class='w-2 h-2 rounded-full bg-amber-400 animate-pulse'></span> Elaborazione in corso...";
+            const estensione = file.name.split('.').pop().toLowerCase();
+
+            if (estensione === 'csv') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('scrigno-testo-grezzo').value = e.target.result;
+                    generaProsaCriticitaLocale(e.target.result, file.name);
+                };
+                reader.readAsText(file);
+            } else if (estensione === 'pdf') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const typedarray = new Uint8Array(e.target.result);
+                    pdfjsLib.getDocument(typedarray).promise.then(function(pdf) {
+                        let promessePagine = [];
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            promessePagine.push(pdf.getPage(i).then(page => {
+                                return page.getTextContent().then(content => {
+                                    return content.items.map(item => item.str).join(" ");
+                                });
+                            }));
+                        }
+                        Promise.all(promessePagine).then(testiPagine => {
+                            const testoTutto = testiPagine.join("\n");
+                            document.getElementById('scrigno-testo-grezzo').value = testoTutto;
+                            generaProsaCriticitaLocale(testoTutto, file.name);
+                        });
+                    });
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        function generaProsaCriticitaLocale(testo, nomeFile) {
+            document.getElementById('status-caricamento').innerHTML = `<span class='w-2 h-2 rounded-full bg-emerald-500'></span> Documento acquisito: <span class="font-bold ml-1">${nomeFile}</span>`;
+            let contatoreBassi = 0;
+            let haNote = false;
+
+            const righe = testo.split(/[\n,;]+/);
+            righe.forEach(r => {
+                if (r.match(/\b([2-5](\.[0-9]*)?)\b/)) contatoreBassi++;
+                if (r.toLowerCase().includes("nota") || r.toLowerCase().includes("sanzione") || r.toLowerCase().includes("ammonizione")) haNote = true;
+            });
+
+            let prosa = `I dati estratti dal registro di classe evidenziano ${contatoreBassi > 0 ? 'alcune flessioni didattiche legate a valutazioni inferiori alla sufficienza in diverse discipline' : 'un andamento didattico e di profitto sostanzialmente regolare'}. `;
+            if(haNote) prosa += `Sotto il profilo disciplinare e comportamentale sono inoltre emerse annotazioni che richiedono una peculiare attenzione per favorire il regolare svolgimento delle lezioni.`;
+            else prosa += `La situazione disciplinare, al netto di ulteriori riscontri, appare nel complesso coerente con i regolamenti di istituto.`;
+            document.getElementById('area-criticita-rilevate').value = prosa;
+        }
+
+        // REGISTRAZIONE AUDIO
+        function invertiRegistrazioneFlusso() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return alert("Riconoscimento vocale non supportato dal browser corrente.");
+
+            const btn = document.getElementById('btn-registra-flusso');
+            const ind = document.getElementById('indicatore-microfono');
+            const area = document.getElementById('area-trascrizione-master');
+
+            if (staRegistrando) {
+                staRegistrando = false;
+                if(motoreTrascrizione) motoreTrascrizione.stop();
+                btn.classList.remove('bg-red-800', 'animate-pulse');
+                btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg> <span>Avvia Registrazione Seduta</span>`;
+                ind.classList.add('hidden');
+                return;
+            }
+
+            staRegistrando = true;
+            motoreTrascrizione = new SpeechRecognition();
+            motoreTrascrizione.continuous = true;
+            motoreTrascrizione.interimResults = true;
+            motoreTrascrizione.lang = 'it-IT';
+
+            let testoBase = area.value;
+            if (testoBase.length > 0 && !testoBase.endsWith(" ")) testoBase += "\n";
+
+            motoreTrascrizione.onstart = () => {
+                btn.classList.add('bg-red-800', 'animate-pulse');
+                btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg> <span>Interrompi Acquisizione</span>`;
+                ind.classList.remove('hidden');
+            };
+
+            motoreTrascrizione.onresult = (e) => {
+                let interim = ''; let final = '';
+                for (let i = e.resultIndex; i < e.results.length; ++i) {
+                    if (e.results[i].isFinal) final += e.results[i][0].transcript;
+                    else interim += e.results[i][0].transcript;
+                }
+                area.value = testoBase + final + interim;
+                if(final) testoBase += final + " ";
+            };
+
+            motoreTrascrizione.onend = () => { if (staRegistrando) motoreTrascrizione.start(); };
+            motoreTrascrizione.start();
+        }
+
+        // ELABORAZIONE TESTUALE
+        async function avviaRiformulazioneMinisteriale() {
+            const trascrizione = document.getElementById('area-trascrizione-master').value;
+            const criticitaFile = document.getElementById('area-criticita-rilevate').value;
+            const apiKey = document.getElementById('api-key-llm').value;
+
+            if(!trascrizione.trim()) return alert("Inserire o registrare i dati della discussione prima di procedere.");
+
+            document.getElementById('corpo-output-dinamico').classList.remove('opacity-50');
+            document.getElementById('corpo-output-dinamico').innerHTML = `
+                <div class="flex flex-col items-center justify-center py-16 gap-4 font-sans text-blue-900">
+                    <svg class="w-10 h-10 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <div class="font-bold text-lg">Elaborazione e stesura dell'atto ministeriale narrativo in corso...</div>
+                    <div class="text-sm text-blue-700/70">Il sistema sta conformando la struttura documentale.</div>
+                </div>`;
+            
+            document.getElementById('sezione-anteprima').classList.remove('step-blur');
+            document.getElementById('sezione-anteprima').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            let dizionarioProsaPunti = {};
+
+            if (apiKey) {
+                try {
+                    const promptIstituzionale = `Sei il Segretario Verbalizzante del Liceo Aristosseno. Analizza la discussione e mappa i contenuti unicamente sui punti dell'ODG.
+                    REGOLE:
+                    1. SE UN PUNTO NON E' TRATTATO, NON INCLUDERLO NEL JSON.
+                    2. SE UN ALUNNO "VA MALE" (insufficienze), incanala in "andamento".
+                    3. SE SI DECIDONO CORSI O RECUPERI, incanala in "apprendimento".
+                    4. NESSUNA TABELLA. Usa solo prosa fluida per costruire una narrazione in discorso indiretto ministeriale. Le chiavi JSON devono corrispondere esattamente all'elenco della struttura che conosci.`;
+
+                    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                        body: JSON.stringify({
+                            model: "gpt-4o-mini",
+                            response_format: { type: "json_object" },
+                            messages: [
+                                { role: "system", content: promptIstituzionale },
+                                { role: "user", content: `CRITICITA REGISTRO:\n${criticitaFile}\n\nDISCUSSIONE:\n${trascrizione}` }
+                            ]
+                        })
+                    });
+                    const d = await res.json();
+                    dizionarioProsaPunti = JSON.parse(d.choices[0].message.content);
+                } catch (e) {
+                    dizionarioProsaPunti = generaProsaMinisterialeLocale(trascrizione);
+                }
+            } else {
+                dizionarioProsaPunti = generaProsaMinisterialeLocale(trascrizione);
+            }
+
+            costruisciAttoProsaFinale(dizionarioProsaPunti, criticitaFile);
+        }
+
+        // ALGORITMO LOCALE DI DISTRIBUZIONE SEMANTICA (Smistamento e Coesione)
+        function generaProsaMinisterialeLocale(testo) {
+            let mappa = {}; 
+
+            const frasi = testo.split(/[.!?\n]+/);
+            let accumuloAndamento = "";
+            let accumuloRecupero = "";
+
+            frasi.forEach(f => {
+                if(f.trim().length < 8) return;
+                
+                let docente = "un membro dell'organo collegiale";
+                let studente = "taluni discenti della classe";
+
+                const matchProf = f.match(/(?:prof|profssa|docente)\s+([A-Z][a-z]*)/i);
+                if (matchProf) docente = `il docente della disciplina Prof. ${matchProf[1]}`;
+                const matchStud = f.match(/(?:alunno|alunna|studente|studentessa)\s+([A-Z][a-z]*)/i);
+                if (matchStud) studente = `l'allievo/a ${matchStud[1]}`;
+
+                let fraseMin = f.toLowerCase();
+                let contenutoTradotto = f.trim();
+
+                if(fraseMin.includes("va male") || fraseMin.includes("insufficien") || fraseMin.includes("bassi") || fraseMin.includes("rendimento")) {
+                    contenutoTradotto = `ha relazionato in merito al percorso formativo, evidenziando una flessione nel rendimento ed una disomogenea partecipazione al dialogo educativo`;
+                    accumuloAndamento += `Sotto tale profilo, ${docente}, riferendo sulla posizione di ${studente}, ${contenutoTradotto}. `;
+                } 
+                else if(fraseMin.includes("corso") || fraseMin.includes("recupero") || fraseMin.includes("sportell") || fraseMin.includes("intervent")) {
+                    contenutoTradotto = `ha palesato l'esigenza di attivare idonee strategie metodologiche e corsi di supporto mirati per l'allineamento dei livelli di competenza`;
+                    accumuloRecupero += `Conformemente alle criticità didattiche rilevate, ${docente} ${contenutoTradotto} in favore di ${studente}. `;
+                }
+                else if(fraseMin.includes("viaggio") || fraseMin.includes("uscita")) {
+                    mappa["uscite"] = `L'organo collegiale ha inoltre proceduto alla verifica della valenza formativa inerente le uscite didattiche ed i viaggi d'istruzione in agenda, confermandone all'unanimità l'approvazione e la coerenza progettuale.`;
+                }
+                else if(fraseMin.includes("ptof")) {
+                    mappa["ptof"] = `Si è dato atto, conseguentemente, della piena declinazione e aderenza della progettazione di classe alle direttrici fondanti del Piano Triennale dell'Offerta Formativa d'Istituto, senza rilevare scostamenti significativi.`;
+                }
+            });
+
+            if(accumuloAndamento) mappa["andamento"] = accumuloAndamento;
+            if(accumuloRecupero) mappa["apprendimento"] = accumuloRecupero;
+
+            return mappa;
+        }
+
+        // COSTRUZIONE ATTO MINISTERIALE NARRATIVO COMPLETO E LOGICO
+        function costruisciAttoProsaFinale(dizionarioProsa, preamboloFile) {
+            if(staRegistrando) invertiRegistrazioneFlusso();
+
+            const dataC = document.getElementById('cfg-data').value;
+            const dataIta = dataC ? dataC.split('-').reverse().join('/') : "";
+            const oraInizio = document.getElementById('cfg-ora-inizio').value;
+            const oraFine = document.getElementById('cfg-ora-fine').value;
+            const classe = document.getElementById('cfg-classe').value.toUpperCase();
+
+            const docPresenti = document.getElementById('docenti-presenti').value.trim();
+            const docAssenti = document.getElementById('docenti-assenti').value.trim();
+            
+            const mostraEsterni = document.getElementById('chk-esterni').checked;
+            const genPresenti = document.getElementById('genitori-presenti').value.trim();
+            const genAssenti = document.getElementById('genitori-assenti').value.trim();
+            const aluPresenti = document.getElementById('alunni-presenti').value.trim();
+            const aluAssenti = document.getElementById('alunni-assenti').value.trim();
+
+            let prosaAppello = "";
+            if (docPresenti) prosaAppello += `Risultano regolarmente presenti per la componente docente i Proff.: ${docPresenti}.`;
+            if (docAssenti) prosaAppello += ` Si dà altresì atto della giustificazione prodotta per l'assenza dei docenti: ${docAssenti}.`;
+
+            if (mostraEsterni) {
+                if (genPresenti || genAssenti) {
+                    prosaAppello += ` Per la componente Genitori sono presenti i sigg. ${genPresenti || '[Nessuno]'}`;
+                    if(genAssenti) prosaAppello += ` (assenti giustificati: ${genAssenti}).`; else prosaAppello += `.`;
+                }
+                if (aluPresenti || aluAssenti) {
+                    prosaAppello += ` Per la componente Alunni intervengono i discenti ${aluPresenti || '[Nessuno]'}`;
+                    if(aluAssenti) prosaAppello += ` (assenti giustificati: ${aluAssenti}).`; else prosaAppello += `.`;
+                }
+            }
+
+            let chiaviTrattate = [];
+            STRUTTURA_ODG.forEach(punto => {
+                const testo = dizionarioProsa[punto.key];
+                if (testo && testo.trim() !== "" && !testo.includes("non è stato investito") && !testo.includes("non è stato oggetto")) {
+                    chiaviTrattate.push(punto);
+                }
+            });
+
+            let odgTrattatiTitoli = chiaviTrattate.map(p => p.titolo).join("; ");
+            if (!odgTrattatiTitoli) odgTrattatiTitoli = "discussioni a carattere generale sull'andamento della classe";
+
+            let narrazioneDiscussione = chiaviTrattate.map(p => {
+                return `In riferimento alla tematica "${p.titolo}", ${dizionarioProsa[p.key]}`;
+            }).join(" ");
+
+            let html = `
+                <div style="width: 100%; font-family: 'Times New Roman', Times, serif; color: #000;">
+                    
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 8px;">
+                        <tr>
+                            <td style="width: 32%; vertical-align: middle; padding: 2px;">
+                                <div style="display: flex; align-items: center; gap: 4px; border-bottom: 2px solid #eab308; padding-bottom: 2px;">
+                                    <div style="width: 24px; height: 16px; background: #003399; color: white; font-weight: bold; text-align: center; line-height:16px; font-size:10px;">★</div>
+                                    <div>
+                                        <div style="font-weight: bold; color: #003399; font-size: 8px;">FONDI STRUTTURALI EUROPEI</div>
+                                        <div style="font-weight: bold; color: #1e40af; font-size: 11px;">pon <span style="font-size:7px; font-weight:normal;">2014-2020</span></div>
+                                    </div>
+                                </div>
+                                <div style="color: #ea580c; font-size: 5px; font-weight: bold; margin-top: 2px;">PER LA SCUOLA - COMPETENZE E AMBIENTI PER L'APPRENDIMENTO</div>
+                            </td>
+                            <td style="width: 33%; vertical-align: middle; text-align: center; padding: 2px; border-left: 1px solid #ddd; border-right: 1px solid #ddd;">
+                                <div style="font-size: 6px; text-transform: uppercase; font-weight: bold; color: #333; line-height: 1.2;">
+                                    Ministero dell'Istruzione, dell'Università e della Ricerca<br>
+                                    <span style="font-weight: normal; text-transform: none;">Dipartimento per la programmazione e la Gestione delle Risorse Umane</span>
+                                </div>
+                            </td>
+                            <td style="width: 22%; vertical-align: middle; padding: 2px; text-align: center;">
+                                <div style="display: inline-block; text-align: left;">
+                                    <span style="font-weight: bold; font-size: 14px; color: #0284c7; font-family:sans-serif;">P</span>
+                                    <span style="font-weight: bold; font-size: 9px; color: #0284c7;">PUGLIA</span>
+                                    <div style="font-weight: bold; font-size: 7px; color: #1e3a8a; margin-top:-4px;">FESR-FSE</div>
+                                </div>
+                            </td>
+                            <td style="width: 13%; vertical-align: middle; text-align: right; padding: 2px;">
+                                <div style="font-weight: bold; font-size: 7px; color: #000; text-align: center;">🛡️<br>Regione Puglia</div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <table style="width: 100%; border-collapse: collapse; border-top: 1px solid #000; padding-top: 6px; margin-bottom: 12px;">
+                        <tr>
+                            <td style="width: 38%; vertical-align: top; padding-right: 5px;">
+                                <div style="font-size: 13px; font-weight: bold; font-family: Arial, sans-serif; color: #000; margin-bottom: 6px;">Liceo Ginnasio Statale Aristosseno</div>
+                                <div style="width: 75px; height: 75px; border: 2px double #1e3a8a; border-radius: 50%; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #f8fafc;">
+                                    <div style="font-size: 4.5px; font-weight: bold; color: #1e3a8a;">LICEO GINNASIO STATALE</div>
+                                    <div style="font-size: 8.5px; font-weight: bold; color: #b91c1c; margin: 1px 0;">ARISTOSSENO</div>
+                                    <div style="font-size: 4.5px; font-weight: bold; color: #1e3a8a;">TARANTO</div>
+                                </div>
+                            </td>
+                            <td style="width: 62%; vertical-align: top; font-size: 9px; padding-left: 10px; border-left: 1px solid #000; line-height: 1.35;">
+                                <div style="font-weight: bold; font-size: 9.5px; margin-bottom: 4px;">Classico, Linguistico, Scientifico, Linguistico Internazionale e Scientifico Internazionale ad opzione Francese</div>
+                                <div>Viale Virgilio, 15 - 74123 Taranto - Tel.099/4539332</div>
+                                <div>www.liceoaristosseno.edu.it - email: tapc070005@istruzione.it</div>
+                                <div>Partita I.V.A. 03012100730 - <strong>Codice CUF: UFWF8Y</strong></div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div style="text-align: center; font-weight: bold; font-size: 13px; margin-top: 15px; margin-bottom: 15px; text-transform: uppercase; font-family: Arial, sans-serif;">
+                        VERBALE DEL CONSIGLIO DELLA CLASSE ${classe}
+                    </div>
+
+                    <div class="paragrafo-verbale" style="text-indent: 0; text-align: justify;">
+                        Il giorno <strong>${dataIta}</strong>, alle ore <strong>${oraInizio}</strong>, nelle forme di legge e previa regolare convocazione dirigenziale comunicata agli atti, si è riunito il Consiglio della classe <strong>${classe}</strong>, al fine di trattare e deliberare in merito ai seguenti punti posti all'Ordine del Giorno: <em>${odgTrattatiTitoli}</em>.
+                    </div>
+
+                    <div class="paragrafo-verbale" style="text-align: justify;">
+                        Assume la presidenza il Coordinatore, fungendo da Segretario verbalizzante il docente designato. Accertata la validità della seduta per la presenza del numero legale dei componenti, il Presidente dichiara aperti i lavori. ${prosaAppello}
+                    </div>
+
+                    <div class="paragrafo-verbale" style="text-align: justify;">
+                        In via preliminare, il Consiglio procede a una sintetica ma accurata disamina logica e didattica della situazione della classe, basata sulle evidenze documentali. ${preamboloFile || 'Allo stato dell\'arte non si registrano anomalie ostative al proseguimento ordinario della didattica.'}
+                    </div>
+
+                    <div class="paragrafo-verbale" style="text-align: justify;">
+                        Successivamente, si passa alla trattazione organica dei punti effettivi iscritti all'ordine del giorno. ${narrazioneDiscussione || 'Dalla seduta odierna non si rilevano ulteriori dichiarazioni od interventi integrativi per i punti in calce, risultando i medesimi già precedentemente deliberati in sede d\'Istituto.'}
+                    </div>
+
+                    <div class="paragrafo-verbale" style="margin-top: 30px; text-align: justify;">
+                        Esauriti gli argomenti di pertinenza oggetto di specifica discussione e non essendovi null'altro da deliberare, constatata la congruità delle dichiarazioni unitariamente verbalizzate in forma indiretta, il Presidente dichiara tolta la seduta alle ore <strong>${oraFine}</strong>, previa lettura ed approvazione unanime del presente atto.
+                    </div>
+
+                    <table style="width: 100%; margin-top: 50px; font-size: 11px; text-align: center; font-family: sans-serif;">
+                        <tr>
+                            <td style="width: 50%;">IL SEGRETARIO VERBALIZZANTE<br><br><br>___________________________________</td>
+                            <td style="width: 50%;">IL PRESIDENTE (COORDINATORE)<br><br><br>___________________________________</td>
+                        </tr>
+                    </table>
+                </div>
+            `;
+
+            document.getElementById('corpo-output-dinamico').innerHTML = html;
+        }
+
+        function esportaInWord() {
+            const inner = document.getElementById('area-stampa-documento').innerHTML;
+            const fullHtml = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'></head><body>${inner}</body></html>`;
+            const blob = new Blob(['\ufeff', fullHtml], { type: 'application/msword;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Verbale_Finale_Aristosseno.doc`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>
+
+  <script>
+
+  </script>
+</body>
+</html>
